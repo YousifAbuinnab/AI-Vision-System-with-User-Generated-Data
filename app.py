@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import streamlit as st
@@ -35,7 +35,7 @@ def render_upload_and_analysis() -> None:
         st.error(f"Failed to read/save uploaded image: {exc}")
         return
 
-    st.image(pil_image, caption=f"Uploaded image: {Path(saved_image_path).name}", use_container_width=True)
+    st.image(pil_image, caption=f"Uploaded image: {Path(saved_image_path).name}", width="stretch")
 
     st.subheader("2) Run AI Analysis")
     if st.button("Analyze Image", type="primary"):
@@ -57,13 +57,13 @@ def render_upload_and_analysis() -> None:
             st.image(
                 bgr_to_rgb(depth_colored),
                 caption=Path(depth_output_path).name,
-                use_container_width=True,
+                width="stretch",
             )
 
             top_prediction = predictions[0]
             insert_upload_record(
                 image_filename=Path(saved_image_path).name,
-                upload_time=datetime.utcnow().isoformat(),
+                upload_time=datetime.now(timezone.utc).isoformat(),
                 predicted_class=top_prediction["class_name"],
                 confidence=top_prediction["confidence"],
                 depth_output_path=str(Path(depth_output_path).relative_to(BASE_DIR)),
@@ -112,7 +112,7 @@ def render_dashboard() -> None:
             "confidence",
             "depth_output_path",
         ]
-        st.dataframe(df[preview_cols].head(20), use_container_width=True)
+        st.dataframe(df[preview_cols].head(20), width="stretch")
 
 
 def main() -> None:
