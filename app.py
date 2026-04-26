@@ -1,3 +1,5 @@
+"""Streamlit application for image upload, classification, and analytics."""
+
 from datetime import datetime, timezone
 from pathlib import Path
 

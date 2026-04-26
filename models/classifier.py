@@ -1,3 +1,5 @@
+"""Image classification helpers using pretrained torchvision models."""
+
 from functools import lru_cache
 from typing import Dict, List
 

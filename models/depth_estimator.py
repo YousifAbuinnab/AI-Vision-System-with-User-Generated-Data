@@ -1,3 +1,5 @@
+"""Depth-like map generation helpers based on OpenCV gradients."""
+
 from pathlib import Path
 from typing import Tuple
 

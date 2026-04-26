@@ -1,3 +1,5 @@
+"""Analytics and charting helpers for dashboard visualizations."""
+
 from typing import Dict
 
 import matplotlib.pyplot as plt

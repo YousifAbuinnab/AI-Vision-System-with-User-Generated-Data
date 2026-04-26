@@ -1,3 +1,5 @@
+"""SQLite helper functions for storing and reading upload records."""
+
 from pathlib import Path
 import sqlite3
 

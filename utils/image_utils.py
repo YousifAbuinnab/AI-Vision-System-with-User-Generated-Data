@@ -1,3 +1,5 @@
+"""Image and file utility helpers used by the Streamlit app."""
+
 import io
 import re
 from datetime import datetime
