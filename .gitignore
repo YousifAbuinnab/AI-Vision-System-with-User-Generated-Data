@@ -1,0 +1,28 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Streamlit and local env files
+.streamlit/secrets.toml
+.env
+.env.*
+
+# Local runtime data
+data/vision_data.db
+data/uploads/*
+!data/uploads/.gitkeep
+data/depth_outputs/*
+!data/depth_outputs/.gitkeep
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
