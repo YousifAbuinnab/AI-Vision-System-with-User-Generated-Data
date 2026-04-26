@@ -90,3 +90,7 @@ Add your own screenshots to `assets/demo_images/` as you test the app.
 - Add model version tracking for reproducible experiments.
 - Export analytics reports as CSV/PDF.
 - Deploy the app on Streamlit Community Cloud or a containerized platform.
+
+## Repository Note
+
+This repository was re-validated for multiline source formatting and Streamlit startup on 2026-04-26.
