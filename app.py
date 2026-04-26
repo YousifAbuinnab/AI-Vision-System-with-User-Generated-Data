@@ -21,8 +21,56 @@ def setup_environment() -> None:
     init_db()
 
 
-def render_upload_and_analysis() -> None:
-    st.subheader("1) Upload Image")
+def initialize_ui_state() -> None:
+    """Initialize values used across sidebar pages."""
+    st.session_state.setdefault("uploaded_image", None)
+    st.session_state.setdefault("uploaded_image_filename", "")
+    st.session_state.setdefault("saved_image_path", "")
+    st.session_state.setdefault("predictions", [])
+    st.session_state.setdefault("depth_colored", None)
+    st.session_state.setdefault("depth_output_path", "")
+
+
+def _run_analysis() -> None:
+    """Run model inference + depth estimation and persist metadata."""
+    uploaded_image = st.session_state.get("uploaded_image")
+    saved_image_path = st.session_state.get("saved_image_path")
+
+    if uploaded_image is None or not saved_image_path:
+        st.warning("Please upload an image first.")
+        return
+
+    try:
+        with st.spinner("Running classifier and depth estimation..."):
+            predictions = classify_image(uploaded_image, top_k=3)
+
+            image_bgr = pil_to_bgr(uploaded_image)
+            depth_colored, _ = estimate_depth_like_map(image_bgr)
+            depth_output_path = save_depth_output(depth_colored, DEPTH_DIR, Path(saved_image_path).name)
+
+        top_prediction = predictions[0]
+        insert_upload_record(
+            image_filename=Path(saved_image_path).name,
+            upload_time=datetime.now(timezone.utc).isoformat(),
+            predicted_class=top_prediction["class_name"],
+            confidence=top_prediction["confidence"],
+            depth_output_path=str(Path(depth_output_path).relative_to(BASE_DIR)),
+        )
+
+        st.session_state["predictions"] = predictions
+        st.session_state["depth_colored"] = depth_colored
+        st.session_state["depth_output_path"] = depth_output_path
+
+        st.success("Analysis completed. Open the Results page from the sidebar.")
+        st.info("Metadata saved to SQLite database.")
+    except Exception as exc:
+        st.error(f"Analysis failed: {exc}")
+
+
+def render_upload_page() -> None:
+    st.subheader("Upload")
+    st.write("Choose an image and run analysis when ready.")
+
     uploaded_file = st.file_uploader("Upload a JPG or PNG image", type=["jpg", "jpeg", "png"])
 
     if uploaded_file is None:
@@ -35,43 +83,55 @@ def render_upload_and_analysis() -> None:
         st.error(f"Failed to read/save uploaded image: {exc}")
         return
 
-    st.image(pil_image, caption=f"Uploaded image: {Path(saved_image_path).name}", width="stretch")
+    st.session_state["uploaded_image"] = pil_image
+    st.session_state["uploaded_image_filename"] = Path(saved_image_path).name
+    st.session_state["saved_image_path"] = saved_image_path
 
-    st.subheader("2) Run AI Analysis")
-    if st.button("Analyze Image", type="primary"):
-        try:
-            with st.spinner("Running classifier and depth estimation..."):
-                predictions = classify_image(pil_image, top_k=3)
+    preview_col, meta_col = st.columns([2, 1], gap="large")
+    with preview_col:
+        st.image(pil_image, caption=f"Uploaded image: {Path(saved_image_path).name}", width="stretch")
+    with meta_col:
+        st.markdown("### File Details")
+        st.write(f"Filename: {Path(saved_image_path).name}")
+        st.write(f"Format: {Path(saved_image_path).suffix.upper().replace('.', '')}")
 
-                image_bgr = pil_to_bgr(pil_image)
-                depth_colored, _ = estimate_depth_like_map(image_bgr)
-                depth_output_path = save_depth_output(depth_colored, DEPTH_DIR, Path(saved_image_path).name)
+    st.write("")
+    if st.button("Analyze Image", type="primary", use_container_width=True):
+        _run_analysis()
 
-            st.success("Analysis completed.")
 
-            st.markdown("### Top 3 Predicted Classes")
-            for idx, item in enumerate(predictions, start=1):
-                st.write(f"{idx}. {item['class_name']} ({item['confidence'] * 100:.2f}%)")
+def render_results_page() -> None:
+    st.subheader("Results")
 
-            st.markdown("### Depth Map (Stereo-inspired Placeholder)")
-            st.image(
-                bgr_to_rgb(depth_colored),
-                caption=Path(depth_output_path).name,
-                width="stretch",
-            )
+    predictions = st.session_state.get("predictions", [])
+    depth_colored = st.session_state.get("depth_colored")
+    uploaded_image = st.session_state.get("uploaded_image")
+    depth_output_path = st.session_state.get("depth_output_path", "")
 
-            top_prediction = predictions[0]
-            insert_upload_record(
-                image_filename=Path(saved_image_path).name,
-                upload_time=datetime.now(timezone.utc).isoformat(),
-                predicted_class=top_prediction["class_name"],
-                confidence=top_prediction["confidence"],
-                depth_output_path=str(Path(depth_output_path).relative_to(BASE_DIR)),
-            )
-            st.info("Metadata saved to SQLite database.")
+    if not predictions:
+        st.info("No results yet. Go to Upload in the sidebar and analyze an image.")
+        return
 
-        except Exception as exc:
-            st.error(f"Analysis failed: {exc}")
+    left_col, right_col = st.columns(2, gap="large")
+    with left_col:
+        st.markdown("### Uploaded Image")
+        st.image(uploaded_image, width="stretch")
+    with right_col:
+        st.markdown("### Depth Map")
+        st.image(
+            bgr_to_rgb(depth_colored),
+            caption=Path(depth_output_path).name if depth_output_path else "Depth output",
+            width="stretch",
+        )
+
+    st.write("")
+    st.markdown("### Top 3 Predicted Classes")
+    result_cols = st.columns(3, gap="medium")
+    for idx, item in enumerate(predictions[:3], start=1):
+        with result_cols[idx - 1]:
+            st.markdown(f"**#{idx} {item['class_name']}**")
+            st.progress(float(item["confidence"]))
+            st.caption(f"Confidence: {item['confidence'] * 100:.2f}%")
 
 
 def render_dashboard() -> None:
@@ -124,13 +184,16 @@ def main() -> None:
     )
 
     setup_environment()
+    initialize_ui_state()
 
-    tab1, tab2 = st.tabs(["Upload and Analyze", "Analytics Dashboard"])
+    st.sidebar.title("Navigation")
+    menu = st.sidebar.radio("Go to", ["Upload", "Results", "Analytics"], index=0)
 
-    with tab1:
-        render_upload_and_analysis()
-
-    with tab2:
+    if menu == "Upload":
+        render_upload_page()
+    elif menu == "Results":
+        render_results_page()
+    else:
         render_dashboard()
 
 
