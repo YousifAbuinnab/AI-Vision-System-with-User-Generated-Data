@@ -8,7 +8,7 @@ import numpy as np
 
 
 def estimate_depth_like_map(image_bgr: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-    """Generate a depth-like visualization from one RGB image using OpenCV gradients."""
+    """Generate a depth-like visualization from a single BGR image."""
     if image_bgr is None or image_bgr.size == 0:
         raise ValueError("Input image is empty. Cannot estimate depth map.")
 
@@ -19,16 +19,25 @@ def estimate_depth_like_map(image_bgr: np.ndarray) -> Tuple[np.ndarray, np.ndarr
     grad_y = cv2.Sobel(blurred, cv2.CV_32F, 0, 1, ksize=3)
     magnitude = cv2.magnitude(grad_x, grad_y)
 
-    depth_gray = cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+    depth_gray = cv2.normalize(
+        magnitude,
+        None,
+        0,
+        255,
+        cv2.NORM_MINMAX,
+    ).astype(np.uint8)
 
-    # Invert before coloring so smoother/near-flat regions appear farther.
+    # Invert before coloring so smoother or near-flat areas appear farther.
     depth_colored = cv2.applyColorMap(255 - depth_gray, cv2.COLORMAP_INFERNO)
-
     return depth_colored, depth_gray
 
 
-def save_depth_output(depth_colored: np.ndarray, output_dir: Path, base_filename: str) -> str:
-    """Save the colored depth map and return its path."""
+def save_depth_output(
+    depth_colored: np.ndarray,
+    output_dir: Path,
+    base_filename: str,
+) -> str:
+    """Save colored depth map and return saved file path."""
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"{Path(base_filename).stem}_depth.png"
 

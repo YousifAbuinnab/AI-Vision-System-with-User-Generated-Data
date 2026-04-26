@@ -7,14 +7,13 @@ import pandas as pd
 
 
 def prepare_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    """Normalize data types and handle missing rows safely."""
+    """Normalize datetime values and remove invalid rows."""
     if df.empty:
         return df
 
     prepared = df.copy()
     prepared["upload_time"] = pd.to_datetime(prepared["upload_time"], errors="coerce")
     prepared = prepared.dropna(subset=["upload_time"])
-
     return prepared
 
 
@@ -22,7 +21,11 @@ def compute_metrics(df: pd.DataFrame) -> Dict[str, object]:
     """Compute dashboard metrics from upload records."""
     total_uploads = int(len(df))
     avg_confidence = float(df["confidence"].mean()) if total_uploads > 0 else 0.0
-    top_classes = df["predicted_class"].value_counts().head(5) if total_uploads > 0 else pd.Series(dtype=int)
+    top_classes = (
+        df["predicted_class"].value_counts().head(5)
+        if total_uploads > 0
+        else pd.Series(dtype=int)
+    )
 
     return {
         "total_uploads": total_uploads,
@@ -32,7 +35,7 @@ def compute_metrics(df: pd.DataFrame) -> Dict[str, object]:
 
 
 def plot_uploads_over_time(df: pd.DataFrame):
-    """Create a time-series chart of upload count over days."""
+    """Create time-series chart for number of uploads per day."""
     fig, ax = plt.subplots(figsize=(10, 4))
 
     if df.empty:
@@ -41,7 +44,13 @@ def plot_uploads_over_time(df: pd.DataFrame):
         return fig
 
     trend = df.set_index("upload_time").resample("D").size()
-    ax.plot(trend.index, trend.values, marker="o", linewidth=2.4, color="#1f77b4")
+    ax.plot(
+        trend.index,
+        trend.values,
+        marker="o",
+        linewidth=2.4,
+        color="#1f77b4",
+    )
     ax.set_title("Uploads Over Time")
     ax.set_xlabel("Date")
     ax.set_ylabel("Uploads")
@@ -54,7 +63,7 @@ def plot_uploads_over_time(df: pd.DataFrame):
 
 
 def plot_top_classes(df: pd.DataFrame, top_n: int = 5):
-    """Create a bar chart of most common predicted classes."""
+    """Create bar chart for most common predicted classes."""
     fig, ax = plt.subplots(figsize=(10, 4))
 
     if df.empty:
@@ -83,5 +92,4 @@ def plot_top_classes(df: pd.DataFrame, top_n: int = 5):
         )
 
     fig.tight_layout()
-
     return fig

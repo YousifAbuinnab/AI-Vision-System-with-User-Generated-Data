@@ -1,7 +1,8 @@
 """Image classification helpers using pretrained torchvision models."""
 
 from functools import lru_cache
-from typing import Dict, List
+from typing import Dict
+from typing import List
 
 import torch
 from PIL import Image
@@ -10,7 +11,7 @@ from torchvision import models
 
 @lru_cache(maxsize=1)
 def _load_classifier_components():
-    """Load model, preprocessing pipeline, and ImageNet labels once."""
+    """Load pretrained classifier, preprocessing transform, and labels once."""
     try:
         weights = models.ResNet18_Weights.DEFAULT
         model = models.resnet18(weights=weights)
@@ -18,16 +19,16 @@ def _load_classifier_components():
 
         preprocess = weights.transforms()
         labels = weights.meta["categories"]
-
         return model, preprocess, labels
     except Exception as exc:
         raise RuntimeError(
-            "Failed to load pretrained ResNet18 model. Check internet access for first-time weight download."
+            "Failed to load pretrained ResNet18 model. "
+            "Check internet access for first-time weight download."
         ) from exc
 
 
 def classify_image(image: Image.Image, top_k: int = 3) -> List[Dict[str, float]]:
-    """Return top-k ImageNet class predictions with confidence scores."""
+    """Return top-k ImageNet predictions with confidence scores."""
     model, preprocess, labels = _load_classifier_components()
 
     input_tensor = preprocess(image).unsqueeze(0)
@@ -38,12 +39,12 @@ def classify_image(image: Image.Image, top_k: int = 3) -> List[Dict[str, float]]
 
     top_probs, top_indices = torch.topk(probabilities, k=top_k)
 
-    results = []
-    for prob, idx in zip(top_probs, top_indices):
+    results: List[Dict[str, float]] = []
+    for probability, index in zip(top_probs, top_indices):
         results.append(
             {
-                "class_name": labels[idx.item()],
-                "confidence": float(prob.item()),
+                "class_name": labels[index.item()],
+                "confidence": float(probability.item()),
             }
         )
 

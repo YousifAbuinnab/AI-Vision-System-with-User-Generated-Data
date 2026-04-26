@@ -4,7 +4,8 @@ import io
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Tuple
+from typing import Iterable
+from typing import Tuple
 
 import cv2
 import numpy as np
@@ -14,18 +15,19 @@ ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 
 
 def ensure_directories(paths: Iterable[Path]) -> None:
-    """Create directories if they do not exist."""
+    """Create directories when they do not already exist."""
     for path in paths:
         path.mkdir(parents=True, exist_ok=True)
 
 
 def _sanitize_filename(name: str) -> str:
+    """Sanitize filename stem to safe characters."""
     cleaned = re.sub(r"[^A-Za-z0-9_-]", "_", name)
     return cleaned.strip("_") or "image"
 
 
 def generate_timestamped_filename(original_name: str) -> str:
-    """Create a safe, unique filename while preserving the extension."""
+    """Create a safe unique filename while preserving extension."""
     original_path = Path(original_name)
     stem = _sanitize_filename(original_path.stem)
 
@@ -38,7 +40,7 @@ def generate_timestamped_filename(original_name: str) -> str:
 
 
 def save_uploaded_file(uploaded_file, upload_dir: Path) -> Tuple[str, Image.Image]:
-    """Save uploaded Streamlit file and return saved path + PIL image."""
+    """Save uploaded Streamlit file and return saved path plus PIL image."""
     if uploaded_file is None:
         raise ValueError("No file provided.")
 
@@ -57,8 +59,8 @@ def save_uploaded_file(uploaded_file, upload_dir: Path) -> Tuple[str, Image.Imag
 
 def pil_to_bgr(image: Image.Image) -> np.ndarray:
     """Convert PIL RGB image to OpenCV BGR format."""
-    rgb = np.array(image)
-    return cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+    rgb_array = np.array(image)
+    return cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR)
 
 
 def bgr_to_rgb(image_bgr: np.ndarray) -> np.ndarray:
